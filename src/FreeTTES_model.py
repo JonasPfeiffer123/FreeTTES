@@ -96,13 +96,13 @@ def main(t, dt, m_VL,  m_RL, T_Zustrom, T_amb, eingabe_volumen=False, zustand_ue
     if m_VL > 0:
         vorgang = "beladen"
         if eingabe_volumen:                                    
-            m_VL = m_VL * __Modell_Stoffwerte("rho",T_Zustrom) 
-            m_RL = m_RL * __Modell_Stoffwerte("rho",T_Abstrom) 
+            m_VL = m_VL * _sw_rho(T_Zustrom) 
+            m_RL = m_RL * _sw_rho(T_Abstrom) 
     elif m_VL < 0:
         vorgang = "entladen"
         if eingabe_volumen:
-            m_VL = m_VL * __Modell_Stoffwerte("rho",T_Abstrom) 
-            m_RL = m_RL * __Modell_Stoffwerte("rho",T_Zustrom)
+            m_VL = m_VL * _sw_rho(T_Abstrom) 
+            m_RL = m_RL * _sw_rho(T_Zustrom)
     else:
         vorgang = "stillstand"
     logger.debug("vorgang=%s m_VL=%s m_RL=%s T_Zustrom=%s", vorgang, m_VL, m_RL, T_Zustrom)
@@ -174,13 +174,13 @@ def main(t, dt, m_VL,  m_RL, T_Zustrom, T_amb, eingabe_volumen=False, zustand_ue
 
     # // Masse und Energie im Startzustand bestimmen
     # -------------------------------------------
-    dh_mal_rho = [v[1] * __Modell_Stoffwerte("rho",v[0])                                # Produkt aus Höhe der Zelle und Dichte der Zelle = Masse bezogen auf die Querschnittsfläche
+    dh_mal_rho = [v[1] * _sw_rho(v[0])                                # Produkt aus Höhe der Zelle und Dichte der Zelle = Masse bezogen auf die Querschnittsfläche
                  for k,v in sorted(Speicherzustand.items())]
-    alle_H = [v[1] * __Modell_Stoffwerte("rho", v[0]) * __Modell_Stoffwerte("h",v[0])   # Enthalpie bezogen auf die Querschnittsfläche
+    alle_H = [v[1] * _sw_rho(v[0]) * _sw_h(v[0])   # Enthalpie bezogen auf die Querschnittsfläche
              for k,v in sorted(Speicherzustand.items())]
     alle_C_fundament = [v[0] * v[1]                                                     # Kapazitäten bezogen auf die Querschnittsfläche im Fundament
-                       * __Modell_Stoffwerte("rho_Fundament") 
-                       * __Modell_Stoffwerte("cp_Fundament")  
+                       * _RHO_FUNDAMENT 
+                       * _CP_FUNDAMENT  
                        for k,v in sorted(Fundamentzustand.items())]
     alle_C_speicher = [v[0] * v[2] for k,v in sorted(Kapazitaeten.items())]             # Kapazitäten bezogen auf die Querschnittsfläche im Speicher # Frage: Was steht in v[2]?
 
@@ -217,7 +217,7 @@ def main(t, dt, m_VL,  m_RL, T_Zustrom, T_amb, eingabe_volumen=False, zustand_ue
             Speicherzustand = __Modell_Aufraumen(Speicherzustand)                   # manchmal noetig weil dh wird zu 0
             # \\ Inversionen auflösen
             counterInv = 0
-            Vp_zu = m_RL / __Modell_Stoffwerte("rho", T_Zustrom)
+            Vp_zu = m_RL / _sw_rho(T_Zustrom)
             start_inversion_status = __Modell_Inversionspruefung(Speicherzustand)   # überprüfen, ob Inversionen vorhanden sind
             inversion_status = start_inversion_status
             while inversion_status != "keine":                                      # so lange Inversionen vorhanden sind, werden diese in der Schleife aufgelöst
@@ -248,7 +248,7 @@ def main(t, dt, m_VL,  m_RL, T_Zustrom, T_amb, eingabe_volumen=False, zustand_ue
             masse_zu = m_RL * dt_sub
             Masse_Global_Modellgrenzen += masse_zu
             Energie_Global_Modellgrenzen += masse_zu\
-                                            * __Modell_Stoffwerte("h", T_Zustrom)
+                                            * _sw_h(T_Zustrom)
         # ende if m_RL > 0
 
         # // Fall: Beladung durchführen - Abstrom
@@ -270,12 +270,12 @@ def main(t, dt, m_VL,  m_RL, T_Zustrom, T_amb, eingabe_volumen=False, zustand_ue
             # B: ACHTUNG: noch nicht klar ob die Ausgabewerte so aussehen werden!
             theta_ab = Ausgabewerte["T_RL"][ausgabezeit]
             #theta_ab = T_Abstrom
-            h_ab = __Modell_Stoffwerte("h", theta_ab)
+            h_ab = _sw_h(theta_ab)
             Masse_Global_Modellgrenzen += masse_ab    
             Energie_Global_Modellgrenzen += masse_ab * h_ab
             H_Abstrom += -masse_ab * h_ab
             # zugefuehrte energie
-            micro_energie = __Modell_Stoffwerte("cp", (T_Zustrom+theta_ab)/2 ) * m_VL * (T_Zustrom - theta_ab) * dt_sub
+            micro_energie = _sw_cp((T_Zustrom+theta_ab)/2) * m_VL * (T_Zustrom - theta_ab) * dt_sub
             macro_energie += micro_energie
         # ende if m_RL<0
 
@@ -294,7 +294,7 @@ def main(t, dt, m_VL,  m_RL, T_Zustrom, T_amb, eingabe_volumen=False, zustand_ue
 
             # \\ Inversionen auflösen
             counterInv = 0
-            Vp_zu = m_VL / __Modell_Stoffwerte("rho", T_Zustrom)
+            Vp_zu = m_VL / _sw_rho(T_Zustrom)
             start_inversion_status = __Modell_Inversionspruefung(Speicherzustand)       # Prüfen, ob Inversionen vorhanden sind
             inversion_status = start_inversion_status
             Speicherzustand = __Modell_Aufraumen(Speicherzustand)
@@ -322,7 +322,7 @@ def main(t, dt, m_VL,  m_RL, T_Zustrom, T_amb, eingabe_volumen=False, zustand_ue
             masse_zu = m_VL * dt_sub
             Masse_Global_Modellgrenzen += masse_zu
             Energie_Global_Modellgrenzen += masse_zu\
-                                            * __Modell_Stoffwerte("h", T_Zustrom)
+                                            * _sw_h(T_Zustrom)
 
         # // Fall: Entladung durchführen - Abstrom
 
@@ -342,13 +342,13 @@ def main(t, dt, m_VL,  m_RL, T_Zustrom, T_amb, eingabe_volumen=False, zustand_ue
             masse_ab = m_VL * dt_sub
             theta_ab = Ausgabewerte["T_VL"][ausgabezeit]
             #theta_ab = T_Abstrom
-            h_ab = __Modell_Stoffwerte("h", theta_ab)
+            h_ab = _sw_h(theta_ab)
             Masse_Global_Modellgrenzen += masse_ab
             Energie_Global_Modellgrenzen += masse_ab * h_ab
             H_Abstrom += -masse_ab * h_ab
 
             #abgefuerhte energie
-            micro_energie = __Modell_Stoffwerte("cp", (T_Zustrom+theta_ab)/2 ) * m_VL * (T_Zustrom - theta_ab)
+            micro_energie = _sw_cp((T_Zustrom+theta_ab)/2) * m_VL * (T_Zustrom - theta_ab)
             macro_energie += micro_energie
         # ende if m_VL < 0
         # TODO counterInv ist eigenlich nicht noetig
@@ -387,7 +387,7 @@ def main(t, dt, m_VL,  m_RL, T_Zustrom, T_amb, eingabe_volumen=False, zustand_ue
         all_h_pos = sorted(Speicherzustand)
         q_punkt_oben = (theta_DR - (theta_o_Rand+Speicherzustand[all_h_pos[-1]][0]) / 2)\
             / (Speicherzustand[all_h_pos[-1]][1]/2)\
-            * __Modell_Stoffwerte("lambda",Speicherzustand[all_h_pos[-1]][0])               # Mittelwert Temp. vor und nach der Ausführung der Wärmeleitung, Länge ist halbe Zellhöhe der obersten Zelle, ergibt insgesamt den Wärmestrom bezogen auf die Querschnittsfläche des Speichers vom DR in die oberste Zelle
+            * _sw_lambda(Speicherzustand[all_h_pos[-1]][0])               # Mittelwert Temp. vor und nach der Ausführung der Wärmeleitung, Länge ist halbe Zellhöhe der obersten Zelle, ergibt insgesamt den Wärmestrom bezogen auf die Querschnittsfläche des Speichers vom DR in die oberste Zelle
         # TODO -q_punkt_u + q_punkt_oben ?
         Energie_Global_Modellgrenzen += (-speicher_param["q_Punkt_U"] + q_punkt_oben)\
                                          * speicher_param["A_Quer"] * dt_sub                # neue Gesamtenergie des Speichers innerhalb der Modellgrenzen berechnen, indem Wärmezu/abfuhr im DR und Fundament? addiert wird
@@ -428,7 +428,7 @@ def main(t, dt, m_VL,  m_RL, T_Zustrom, T_amb, eingabe_volumen=False, zustand_ue
         for hPos in all_h_pos:
             Ausgabewerte["p_unten"][ausgabezeit] += (g
                                                     * Speicherzustand[hPos][1] 
-                            * __Modell_Stoffwerte("rho", Speicherzustand[hPos][0]))         # berechnet den Bodendruck in Pa, indem der Druck aller Zellen aufaddiert wird
+                            * _sw_rho(Speicherzustand[hPos][0]))         # berechnet den Bodendruck in Pa, indem der Druck aller Zellen aufaddiert wird
         Ausgabewerte["p_unten"][ausgabezeit] /= 100000                                      # berechnet Bodendruck in bar
         
         masse_Speicher = __masse_berechnen(Speicherzustand)                                 # berechnet die Speichermasse in kg?
@@ -442,22 +442,22 @@ def main(t, dt, m_VL,  m_RL, T_Zustrom, T_amb, eingabe_volumen=False, zustand_ue
         # aber notwendig um die gesamtmasse konstant zu halten
         Speicherzustand[all_h_pos[0]][1] += ( Masse_Bilanz_Korrektur
                 / (2 * speicher_param["A_Quer"]
-                    * __Modell_Stoffwerte("rho", Speicherzustand[all_h_pos[0]][0])) )
+                    * _sw_rho(Speicherzustand[all_h_pos[0]][0])) )
         Speicherzustand[all_h_pos[-1]][1] += ( Masse_Bilanz_Korrektur
             / (2 * speicher_param["A_Quer"]
-                * __Modell_Stoffwerte("rho", Speicherzustand[all_h_pos[-1]][0])) )
+                * _sw_rho(Speicherzustand[all_h_pos[-1]][0])) )
 
 
         # masse erneute berechnen da 2 zellen geaendert wurden
         masse_Speicher = __masse_berechnen(Speicherzustand)                                 # Frage: eigentlich nicht notwendig?
         Masse_Bilanz_Speicher = masse_Speicher - Masse_Global_Speicherzustand               # Frage: auch nicht notwendig?
         
-        alle_H = [v[1] * __Modell_Stoffwerte("rho", v[0])
-                       * __Modell_Stoffwerte("h",v[0]) 
+        alle_H = [v[1] * _sw_rho(v[0])
+                       * _sw_h(v[0]) 
                 for k,v in sorted(Speicherzustand.items())]                                 # Enthalpie für jede Zelle berechnen
         alle_C_fundament = [v[0] * v[1]
-                        * __Modell_Stoffwerte("rho_Fundament") 
-                        * __Modell_Stoffwerte("cp_Fundament")  
+                        * _RHO_FUNDAMENT 
+                        * _CP_FUNDAMENT  
                         for k,v in sorted(Fundamentzustand.items())]                        # Kapazitäten für jede Fundamentzelle berechnen
         alle_C_speicher = [v[0] * v[2] for k,v in sorted(Kapazitaeten.items())]             # Kapazitäten im Speichermantel berechnen
 
@@ -490,7 +490,7 @@ def main(t, dt, m_VL,  m_RL, T_Zustrom, T_amb, eingabe_volumen=False, zustand_ue
         m_Abstrom = -m_RL * dt
     T_Abstrom = -1
     if m_Abstrom > 0:
-        T_Abstrom = __Modell_Stoffwerte("h_rev", H_Abstrom / m_Abstrom)
+        T_Abstrom = _sw_h_rev(H_Abstrom / m_Abstrom)
 
     
     m_ges = masse_Speicher / 1000 # ausgabe in t
@@ -521,8 +521,8 @@ def main(t, dt, m_VL,  m_RL, T_Zustrom, T_amb, eingabe_volumen=False, zustand_ue
 
     m_nutz_max = __masse_nutz_max(Speicherzustand, h_WS)
 
-    mp_max_P_BL = speicher_param["Vp_max"] / 3600 * __Modell_Stoffwerte("rho", T_Diff_O)
-    mp_max_P_EL = speicher_param["Vp_max"] / 3600 * __Modell_Stoffwerte("rho", T_Diff_U)
+    mp_max_P_BL = speicher_param["Vp_max"] / 3600 * _sw_rho(T_Diff_O)
+    mp_max_P_EL = speicher_param["Vp_max"] / 3600 * _sw_rho(T_Diff_U)
 
     mp_max_BL = min((m_nutz_max - m_nutz) * 1000 / dt , mp_max_P_BL)
     mp_max_BL = max(mp_max_BL, 0)
@@ -589,11 +589,11 @@ def __energie_nutz(sz: dict, h_ws: float, T_bezug: float = None) -> float:
         
     h_pos_OK_oberer_Diff = h_ws - speicher_param["H_WS_OK_Dif"]
     energie = 0.0
-    bezugsenthalpie = __Modell_Stoffwerte("h", T_bezug)
+    bezugsenthalpie = _sw_h(T_bezug)
 
     for k, v in sz.items():
-        rho = __Modell_Stoffwerte("rho", v[0])
-        h_diff = __Modell_Stoffwerte("h", v[0]) - bezugsenthalpie
+        rho = _sw_rho(v[0])
+        h_diff = _sw_h(v[0]) - bezugsenthalpie
 
         if v[0] > T_bezug:
             if (k + v[1] / 2) <= h_pos_OK_oberer_Diff:
@@ -620,14 +620,14 @@ def __masse_nutz(speicherzustand: dict, h_WS: float, T_bezug: float = None) -> f
     debug_list = []
     for k, v in speicherzustand.items():
         if (v[0] >= T_bezug and k + v[1]/2 <= h_pos_OK_oberer_Diff and k - v[1]/2 >= speicher_param["H_B_UK_Dif"] ):
-            m_debug = v[1] * __Modell_Stoffwerte("rho", v[0])
-            m_nutz += v[1] * __Modell_Stoffwerte("rho", v[0])
+            m_debug = v[1] * _sw_rho(v[0])
+            m_nutz += v[1] * _sw_rho(v[0])
         elif v[0] >= T_bezug and k - v[1]/2 < h_pos_OK_oberer_Diff and k + v[1]/2 > h_pos_OK_oberer_Diff:
-            m_debug = (h_pos_OK_oberer_Diff - (k - v[1]/2)) * __Modell_Stoffwerte("rho", v[0])
-            m_nutz += (h_pos_OK_oberer_Diff - (k - v[1]/2)) * __Modell_Stoffwerte("rho", v[0])
+            m_debug = (h_pos_OK_oberer_Diff - (k - v[1]/2)) * _sw_rho(v[0])
+            m_nutz += (h_pos_OK_oberer_Diff - (k - v[1]/2)) * _sw_rho(v[0])
         elif v[0] >= T_bezug and k + v[1]/2 > speicher_param["H_B_UK_Dif"] and k - v[1]/2 < speicher_param["H_B_UK_Dif"]:
-            m_debug = ((k + v[1]/2) - speicher_param["H_B_UK_Dif"]) * __Modell_Stoffwerte("rho", v[0])
-            m_nutz += ((k + v[1]/2) - speicher_param["H_B_UK_Dif"] ) * __Modell_Stoffwerte("rho", v[0])
+            m_debug = ((k + v[1]/2) - speicher_param["H_B_UK_Dif"]) * _sw_rho(v[0])
+            m_nutz += ((k + v[1]/2) - speicher_param["H_B_UK_Dif"] ) * _sw_rho(v[0])
         else:
             m_debug = 0
 
@@ -649,11 +649,11 @@ def __masse_nutz_max(speicherzustand, h_WS):
 
     for k,v in speicherzustand.items():
         if (k - v[1]/2 >= speicher_param["H_B_UK_Dif"] and k + v[1]/2 <= h_pos_OK_oberer_Diff):
-            m_plug_nutz += v[1] * __Modell_Stoffwerte("rho", v[0])
+            m_plug_nutz += v[1] * _sw_rho(v[0])
         elif k - v[1]/2 < h_pos_OK_oberer_Diff and k + v[1]/2 > h_pos_OK_oberer_Diff:
-            m_plug_nutz += (h_pos_OK_oberer_Diff - (k - v[1]/2)) * __Modell_Stoffwerte("rho", v[0])
+            m_plug_nutz += (h_pos_OK_oberer_Diff - (k - v[1]/2)) * _sw_rho(v[0])
         elif k + v[1]/2 > speicher_param["H_B_UK_Dif"] and k - v[1]/2 < speicher_param["H_B_UK_Dif"]:
-            m_plug_nutz += ((k + v[1]/2) - speicher_param["H_B_UK_Dif"]) * __Modell_Stoffwerte("rho", v[0])
+            m_plug_nutz += ((k + v[1]/2) - speicher_param["H_B_UK_Dif"]) * _sw_rho(v[0])
 
     m_nutz_max = speicher_param["A_Quer"] * m_plug_nutz / 1000         # nutzbare Masse in Tonnen
     return m_nutz_max
@@ -694,7 +694,7 @@ def __masse_berechnen(Speicher):
     Speicher: Speicherzustand
      Speichermasse in kg
     """
-    masse_pro_m2 = sum([v[1] * __Modell_Stoffwerte("rho", v[0])
+    masse_pro_m2 = sum([v[1] * _sw_rho(v[0])
                         for v in Speicher.values()])                # Masse pro m² in kg/m²
     return speicher_param["A_Quer"] * masse_pro_m2                  # Masse in kg
 
@@ -737,7 +737,7 @@ def __Modell_Initialisierung(H_UEB=None, BeladeFaktor=None, iniZeitstempel=0.00,
             hpos = 0
             T_Grad = (speicher_param["q_Punkt_U"]
                     * speicher_param["H_B_UK_Dif"] 
-                    / __Modell_Stoffwerte("lambda", speicher_param["T_unten"]))         # Temperaturgradient, q_Punkt_U ist Wärmestromdichte!
+                    / _sw_lambda(speicher_param["T_unten"]))         # Temperaturgradient, q_Punkt_U ist Wärmestromdichte!
             counter = speicher_param["H_B_UK_Dif"] / dh                                 # Anzahl Zellen unter der Unterkante des unteren Diffusors
             # Das Temperaturprofil vom Boden bis UK Dif erzeugen
             while counter > 0:                                                          # zählt bis alle Zellen unterhalb der UK des Diffusors erzeugt sind
@@ -812,7 +812,7 @@ def __Modell_Initialisierung(H_UEB=None, BeladeFaktor=None, iniZeitstempel=0.00,
             
             
         else:                                                                               # wenn der Beladefaktor vorgegeben ist
-            rho_T_max = __Modell_Stoffwerte("rho", speicher_param["T_oben"])
+            rho_T_max = _sw_rho(speicher_param["T_oben"])
             H_aktiv = (speicher_param["H_WS_max"] 
                     - speicher_param["H_B_UK_Dif"]
                     - speicher_param["H_WS_OK_Dif"])
@@ -834,7 +834,7 @@ def __Modell_Initialisierung(H_UEB=None, BeladeFaktor=None, iniZeitstempel=0.00,
                     theta = T_mittel - T_diff / 2 * special.erf(f_a * dH * (counter - 0.5))
                 else:
                     theta = T_mittel - T_diff/2
-                rho = __Modell_Stoffwerte("rho", theta)
+                rho = _sw_rho(theta)
                 if rho * dH * speicher_param["A_Quer"] <= m_kalt:
                     m_kalt -= rho * dH * speicher_param["A_Quer"]
                     kalteSeite[counter] = [theta, dH, 0, 0]
@@ -853,7 +853,7 @@ def __Modell_Initialisierung(H_UEB=None, BeladeFaktor=None, iniZeitstempel=0.00,
                     theta = T_mittel + T_diff / 2 * special.erf(f_a * dH * (counter - 0.5))
                 else:
                     theta = T_mittel + T_diff/2
-                rho = __Modell_Stoffwerte("rho", theta)
+                rho = _sw_rho(theta)
 
                 if rho * dH * speicher_param["A_Quer"] <= m_heiss:
                     m_heiss -= rho * dH * speicher_param["A_Quer"]
@@ -870,7 +870,7 @@ def __Modell_Initialisierung(H_UEB=None, BeladeFaktor=None, iniZeitstempel=0.00,
             # Diffusors in K/m
             T_Grad = (speicher_param["q_Punkt_U"] 
                     * speicher_param["H_B_UK_Dif"] 
-                    / __Modell_Stoffwerte("lambda", speicher_param["T_unten"]))
+                    / _sw_lambda(speicher_param["T_unten"]))
 
             counter = 1
             while True:
@@ -942,7 +942,7 @@ def __Modell_Initialisierung(H_UEB=None, BeladeFaktor=None, iniZeitstempel=0.00,
                     continue
                 if bgd_p<0:                                                                     # nächstes Schleifenelement, wenn Fülldruck "aufgebraucht ist"
                     continue
-                rho = __Modell_Stoffwerte("rho", zustand[hPos_lst[i]])                          # Dichte in Zelle berechnen
+                rho = _sw_rho(zustand[hPos_lst[i]])                          # Dichte in Zelle berechnen
                 bgd_p -= rho * g * (hPos_lst[i]-h_WS)                                           # Fülldruck um den Druck der "Zelle" reduzieren
                 h_WS = hPos_lst[i]                                                              # h_WS wird auf aktuelle hPos gesetzt
                 if bgd_p < 0:
@@ -1023,10 +1023,10 @@ def __Modell_Initialisierung(H_UEB=None, BeladeFaktor=None, iniZeitstempel=0.00,
     # ---------------------------------------------
     n_steps = 1000                                                                          # Anzahl Zellen im Mantel
     dh_kapa = speicher_param["H_Mantel"] / n_steps                                          # Zellenhöhe im Mantel
-    Massen_pro_m = pi *__Modell_Stoffwerte("rho_Mantel") \
+    Massen_pro_m = pi *_RHO_MANTEL \
                    * ((speicher_param["R_innen"] + 0.016)**2 
                       - speicher_param["R_innen"]**2)                                       # Masse pro Höhenmeter des Mantels
-    kapazitaet = dh_kapa * Massen_pro_m * __Modell_Stoffwerte("cp_Mantel")                  # Wärmekapazität = Q / delta_T
+    kapazitaet = dh_kapa * Massen_pro_m * _CP_MANTEL                  # Wärmekapazität = Q / delta_T
     
     # Spline aus vertikalen Temperaturfeld bestimmen
     all_theta = [v[0] for k,v in sorted(Speicherzustand.items())]                           # Temperaturen aus Speicherzustand in eine Variable schreiben
@@ -1094,23 +1094,23 @@ def __Modell_Zellgroesse(step, teilenZusammen, Speicherzustand):
                     theta_u = theta_i - grad_minus * dh_i / 3                       # Temperatur 1/3 der Zellhöhe unter der Zellmitte -> Zelle soll gedrittelt werden
                     theta_o = theta_i + grad_plus * dh_i / 3                        # Temperatur 1/3 der Zellhöhe über der Zellmitte
 
-                    m_t = dh_i * __Modell_Stoffwerte("rho", theta_i)                # Masse der Zelle bezogen auf die Speicherfläche
-                    h_t = __Modell_Stoffwerte("h", theta_i)                         # Enthalpie der Zelle
+                    m_t = dh_i * _sw_rho(theta_i)                # Masse der Zelle bezogen auf die Speicherfläche
+                    h_t = _sw_h(theta_i)                         # Enthalpie der Zelle
                     loop = 0
                     while loop < 2:                                                 # Loop zweimal durchführen
                         # kann arithmetisch gemittelt werden, da alle Massen gleich
-                        d_h = h_t - (__Modell_Stoffwerte("h", theta_u) 
-                                     + __Modell_Stoffwerte("h",theta_o) 
-                                     + __Modell_Stoffwerte("h", theta_i)) / 3       # Abweichung der "neuen" Enthalpie von der aktuellen Enthalpie der Zelle
-                        d_theta = d_h / __Modell_Stoffwerte("cp", theta_i)          # Temperaturdifferenz zum Ausgleich der Enthalpiedifferenz
+                        d_h = h_t - (_sw_h(theta_u) 
+                                     + _sw_h(theta_o) 
+                                     + _sw_h(theta_i)) / 3       # Abweichung der "neuen" Enthalpie von der aktuellen Enthalpie der Zelle
+                        d_theta = d_h / _sw_cp(theta_i)          # Temperaturdifferenz zum Ausgleich der Enthalpiedifferenz
                         theta_i += d_theta                                          # Korrektur der Temperatur
                         theta_u += d_theta                                          # Korrektur der Temperatur
                         theta_o += d_theta                                          # Korrektur der Temperatur
                         loop += 1
 
-                    dh_u = m_t / 3 / __Modell_Stoffwerte("rho", theta_u)            # Berechnung der Zellhöhe der neuen unteren Zelle
-                    dh_o = m_t / 3 / __Modell_Stoffwerte("rho", theta_o)            # Berechnung der Zellhöhe der neuen oberen Zelle
-                    dh_i = m_t / 3 / __Modell_Stoffwerte("rho", theta_i)            # Berechnung der Zellhöhe der neuen mittleren Zelle
+                    dh_u = m_t / 3 / _sw_rho(theta_u)            # Berechnung der Zellhöhe der neuen unteren Zelle
+                    dh_o = m_t / 3 / _sw_rho(theta_o)            # Berechnung der Zellhöhe der neuen oberen Zelle
+                    dh_i = m_t / 3 / _sw_rho(theta_i)            # Berechnung der Zellhöhe der neuen mittleren Zelle
                     if teilenZusammen == "teilen":                                  # falls nur geteilt werden soll -> es sind Impulskomponenten vorhanden
                         Speicherzustand_neu[hPos - dh_i / 3] = [
                                                     theta_u,
@@ -1182,7 +1182,7 @@ def __Modell_Zellgroesse(step, teilenZusammen, Speicherzustand):
             hPos = all_h_pos[i]
             theta_i = Speicherzustand[hPos][0]
             dh_i = Speicherzustand[hPos][1]
-            mass_i = dh_i * __Modell_Stoffwerte("rho", theta_i)                     # Masse bezogen auf die Speicherfläche
+            mass_i = dh_i * _sw_rho(theta_i)                     # Masse bezogen auf die Speicherfläche
 
             if i < len(all_h_pos)-1:                                                # für alle Zellen außer die oberste
                 hPos_dazu = all_h_pos[i+1]                                          # Zelle darüber wird "addiert"
@@ -1200,13 +1200,13 @@ def __Modell_Zellgroesse(step, teilenZusammen, Speicherzustand):
             if ((abs(theta_dazu - theta_i)**0.75 * dh_i < dh_max_theta / f_hyst)    # Temperaturgradient muss hinreichend klein sein
             and (dh_i < dh_max / f_hyst)):                                          # und Zelle kleiner als eine bestimmte Höhe sein
                 mass_dazu = (Speicherzustand[hPos_dazu][1]
-                             * __Modell_Stoffwerte("rho", theta_dazu))              # Masse der Zelle, die addiert wird
+                             * _sw_rho(theta_dazu))              # Masse der Zelle, die addiert wird
 
-                H_neu = (mass_i * __Modell_Stoffwerte("h", theta_i)
-                         + mass_dazu * __Modell_Stoffwerte("h", theta_dazu))        # neue Enthalpie der Zelle
+                H_neu = (mass_i * _sw_h(theta_i)
+                         + mass_dazu * _sw_h(theta_dazu))        # neue Enthalpie der Zelle
 
-                theta_neu = __Modell_Stoffwerte("h_rev", H_neu / (mass_i+mass_dazu))    # neue Temperatur der Zelle
-                dh_neu = (mass_i+mass_dazu) /  __Modell_Stoffwerte("rho", theta_neu)    # neue Höhe der Zelle
+                theta_neu = _sw_h_rev(H_neu / (mass_i+mass_dazu))    # neue Temperatur der Zelle
+                dh_neu = (mass_i+mass_dazu) /  _sw_rho(theta_neu)    # neue Höhe der Zelle
                 Speicherzustand[hPos] = [0, 0, 0, 0]                                    # Speicherzustand der betrachteten Zelle auf Null setzen, sodass diese beim Aufräumen gelöscht wird
                 Speicherzustand[hPos_dazu] = [theta_neu, dh_neu, 0, 0]                  # Speicherzustand der addierten Zelle neu setzen
                 count += 1
@@ -1277,9 +1277,9 @@ def __Modell_Horizontalmischung(Speicherzustand):
             theta_plus = Speicherzustand[hPos_plus][0]
             theta_minus = Speicherzustand[hPos_minus][0]
 
-            rho = __Modell_Stoffwerte("rho", Speicherzustand[hPos][0])
-            rho_plus = __Modell_Stoffwerte("rho", theta_plus)
-            rho_minus = __Modell_Stoffwerte("rho", theta_minus)
+            rho = _sw_rho(Speicherzustand[hPos][0])
+            rho_plus = _sw_rho(theta_plus)
+            rho_minus = _sw_rho(theta_minus)
 
             dh_pot_plus = 0
             # B: ACHTUNG: bitte checken ob das eigentlich so ist (unless)
@@ -1333,13 +1333,13 @@ def __Modell_Horizontalmischung(Speicherzustand):
             if mix_plus == 1:
                 dh = Speicherzustand[hPos][1]
                 theta = Speicherzustand[hPos][0]
-                rho = __Modell_Stoffwerte("rho", theta)
+                rho = _sw_rho(theta)
                 m = dh * rho
                 m_plus = rho_plus * dh_pot_plus
-                H = m * __Modell_Stoffwerte("h", theta)\
-                    + m_plus * __Modell_Stoffwerte("h", theta_plus)
-                Speicherzustand[hPos][0] = __Modell_Stoffwerte("h_rev", (H/(m+m_plus)) )
-                rho = __Modell_Stoffwerte("rho",Speicherzustand[hPos][0])
+                H = m * _sw_h(theta)\
+                    + m_plus * _sw_h(theta_plus)
+                Speicherzustand[hPos][0] = _sw_h_rev((H/(m+m_plus)))
+                rho = _sw_rho(Speicherzustand[hPos][0])
                 Speicherzustand[hPos][1] = (m + m_plus) / rho
                 Speicherzustand[hPos][3] = Speicherzustand[hPos][3]*m / (m+m_plus)
                 Speicherzustand[hPos_plus][1] -= dh_pot_plus
@@ -1349,14 +1349,13 @@ def __Modell_Horizontalmischung(Speicherzustand):
             if mix_minus == 1:
                 dh = Speicherzustand[hPos][1]
                 theta = Speicherzustand[hPos][0]
-                rho = __Modell_Stoffwerte("rho", theta)
+                rho = _sw_rho(theta)
                 m = dh * rho
                 m_minus = rho_minus * dh_pot_minus
-                H = m * __Modell_Stoffwerte("h", theta)\
-                    + m_minus * __Modell_Stoffwerte("h", theta_minus)
-                Speicherzustand[hPos][0] = __Modell_Stoffwerte("h_rev",
-                                                               H / (m + m_minus))
-                rho = __Modell_Stoffwerte("rho",Speicherzustand[hPos][0])
+                H = m * _sw_h(theta)\
+                    + m_minus * _sw_h(theta_minus)
+                Speicherzustand[hPos][0] = _sw_h_rev(H / (m + m_minus))
+                rho = _sw_rho(Speicherzustand[hPos][0])
                 Speicherzustand[hPos][1] = (m + m_minus) / rho
                 Speicherzustand[hPos][3] = Speicherzustand[hPos][3]\
                                            * m / (m + m_minus)
@@ -1408,8 +1407,8 @@ def __Modell_Impuls(inversion_status, Zeitabstand, Speicherzustand):
             dh_r = Speicherzustand[hPos_r][1]
 
 
-            rho_b = __Modell_Stoffwerte("rho", theta_b)
-            rho_r = __Modell_Stoffwerte("rho", theta_r)
+            rho_b = _sw_rho(theta_b)
+            rho_r = _sw_rho(theta_r)
             if inversion_status == "steigend":
                 d_rho_inv = rho_b - rho_r
             elif inversion_status == "fallend":
@@ -1435,7 +1434,7 @@ def __Modell_Impuls(inversion_status, Zeitabstand, Speicherzustand):
             theta_b = (V_b * theta_b * rho_b + d_V_an_b * theta_r * rho_r)\
                       / (V_b * rho_b + d_V_an_b * rho_r)
             V_b = (V_b * rho_b + d_V_an_b * rho_r)\
-                  / __Modell_Stoffwerte("rho",theta_b)
+                  / _sw_rho(theta_b)
             dh_r -= d_V_an_b / speicher_param["A_Quer"]
 
             Speicherzustand[hPos_r][1] = V_b / speicher_param["A_Quer"]
@@ -1574,12 +1573,12 @@ def __Modell_Inversion(inversion_status, unten_oben, Vp_zu, dt, Speicherzustand)
                 inv = True
                 if d_theta_inv > 1E-00:
                     BilanzMasse_1 = speicher_param["A_Quer"]\
-                                    * sum([v[1] * __Modell_Stoffwerte("rho",v[0]) 
+                                    * sum([v[1] * _sw_rho(v[0]) 
                                         for k,v in sorted(Speicherzustand.items())])
                     BilanzEnergie_1 = speicher_param["A_Quer"]\
                                      * sum([v[1] 
-                                            * __Modell_Stoffwerte("rho",v[0]) 
-                                            * __Modell_Stoffwerte("h",v[0]) 
+                                            * _sw_rho(v[0]) 
+                                            * _sw_h(v[0]) 
                                         for k,v in sorted(Speicherzustand.items())])
             # Ende if d_theta_inv > 1e-09
             counter = 0
@@ -1642,18 +1641,14 @@ def __Modell_Inversion(inversion_status, unten_oben, Vp_zu, dt, Speicherzustand)
                 
                 if dh_r < 1.0E-12: # sehr kleine zellen aufloesen B: ACHTUNG ueberpruefen ob die zahl groesser sein koennte
                     dh_r_next = Speicherzustand[hPos_r_next][1] 
-                    m_r = speicher_param["A_Quer"] *  dh_r * __Modell_Stoffwerte("rho",
-                                                    Speicherzustand[hPos_r][0])
+                    m_r = speicher_param["A_Quer"] *  dh_r * _sw_rho(Speicherzustand[hPos_r][0])
                     
-                    m_r_next = speicher_param["A_Quer"] * dh_r_next * __Modell_Stoffwerte("rho", 
-                                                    Speicherzustand[hPos_r_next][0])
-                    E_r = m_r * __Modell_Stoffwerte("h", 
-                                                    Speicherzustand[hPos_r][0])
-                    E_r_next = m_r_next * __Modell_Stoffwerte("h", 
-                                                    Speicherzustand[hPos_r_next][0])
-                    theta_misch = __Modell_Stoffwerte("h_rev", ((E_r + E_r_next)
+                    m_r_next = speicher_param["A_Quer"] * dh_r_next * _sw_rho(Speicherzustand[hPos_r_next][0])
+                    E_r = m_r * _sw_h(Speicherzustand[hPos_r][0])
+                    E_r_next = m_r_next * _sw_h(Speicherzustand[hPos_r_next][0])
+                    theta_misch = _sw_h_rev(((E_r + E_r_next)
                                                                  / (m_r + m_r_next)))
-                    rho_misch = __Modell_Stoffwerte("rho", theta_misch)
+                    rho_misch = _sw_rho(theta_misch)
 
                     # B: ruhende Zelle mit der naechsten vermischen
                     Speicherzustand[hPos_r][1] = 0 # B: Zellenhoehe ruhende Zelle = 0
@@ -1665,8 +1660,8 @@ def __Modell_Inversion(inversion_status, unten_oben, Vp_zu, dt, Speicherzustand)
                     Speicherzustand = __Modell_Aufraumen(Speicherzustand)
                     return Speicherzustand
                 # Ende if dh_r < 1.0E-12
-                rho_b = __Modell_Stoffwerte("rho", Speicherzustand[hPos_b][0])
-                rho_r = __Modell_Stoffwerte("rho", theta_r)
+                rho_b = _sw_rho(Speicherzustand[hPos_b][0])
+                rho_r = _sw_rho(theta_r)
                 if inversion_status == "steigend":
                     d_rho_inv = rho_b - rho_r
                 elif inversion_status == "fallend":
@@ -1706,7 +1701,7 @@ def __Modell_Inversion(inversion_status, unten_oben, Vp_zu, dt, Speicherzustand)
                 # an die ruhende abgegeben wird
                 d_V_an_r = 0
                 if hPos_r_next > -1:
-                    beta_rho = __Modell_Stoffwerte("beta_rho", theta_r) 
+                    beta_rho = _sw_beta_rho(theta_r) 
                     d_hPos_next = abs(hPos_r - hPos_r_next)
                     if inversion_status == "steigend":
                         theta_grenz_impuls = (theta_r_next 
@@ -1803,20 +1798,20 @@ def __Modell_Inversion(inversion_status, unten_oben, Vp_zu, dt, Speicherzustand)
             # Ende <while inv>
             if BilanzMasse_1 > 0:
                 BilanzMasse_2  = speicher_param["A_Quer"]\
-                                 * sum([v[1] * __Modell_Stoffwerte("rho",v[0]) 
+                                 * sum([v[1] * _sw_rho(v[0]) 
                                     for k,v in sorted(Speicherzustand.items())])
                 BilanzEnergie_2 = speicher_param["A_Quer"]\
                                 * sum([v[1] 
-                                        * __Modell_Stoffwerte("rho",v[0]) 
-                                        * __Modell_Stoffwerte("h",v[0]) 
+                                        * _sw_rho(v[0]) 
+                                        * _sw_h(v[0]) 
                                         for k,v in sorted(Speicherzustand.items())])
                 m_alt = speicher_param["A_Quer"] * Speicherzustand[hPos_b][1]\
-                        * __Modell_Stoffwerte("rho", Speicherzustand[hPos_b][0])
-                E_alt = m_alt * __Modell_Stoffwerte("h", Speicherzustand[hPos_b][0])
+                        * _sw_rho(Speicherzustand[hPos_b][0])
+                E_alt = m_alt * _sw_h(Speicherzustand[hPos_b][0])
                 m_neu = m_alt - (BilanzMasse_2 - BilanzMasse_1)
                 E_neu = E_alt - (BilanzEnergie_2 - BilanzEnergie_1)
-                theta_neu = __Modell_Stoffwerte("h_rev", E_neu / m_neu)
-                rho_neu = __Modell_Stoffwerte("rho", theta_neu)
+                theta_neu = _sw_h_rev(E_neu / m_neu)
+                rho_neu = _sw_rho(theta_neu)
                 Speicherzustand[hPos_b][0] = theta_neu
                 Speicherzustand[hPos_b][1] = m_neu / speicher_param["A_Quer"]\
                                              / rho_neu
@@ -1861,7 +1856,7 @@ def __Modell_Zustrom(unten_oben, aktuellSekunden, ausgabezeit, Begleitdaten,
 
     theta_zu = Begleitdaten[aktuellSekunden][theta_VL_RL]
     m_punkt_zu = Begleitdaten[aktuellSekunden]["m_Punkt"]
-    rho_zu = __Modell_Stoffwerte("rho", theta_zu)
+    rho_zu = _sw_rho(theta_zu)
     Vp_zu = m_punkt_zu / rho_zu  
 
     dh_zu = Vp_zu * Zeitabstand / speicher_param["A_Quer"] #meter
@@ -1989,7 +1984,7 @@ def __Modell_Abstrom(unten_oben, aktuellSekunden, ausgabezeit, Ausgabewerte,
     lastKey = max(all_h_pos)
     h_WS = lastKey + Speicherzustand[lastKey][1] / 2
     theta_diffusor = __Modell_Temperatur_Diffusorhoehe(unten_oben, h_WS, Speicherzustand)
-    F_ab = Begleitdaten[aktuellSekunden]["m_Punkt"] / __Modell_Stoffwerte("rho", theta_diffusor)
+    F_ab = Begleitdaten[aktuellSekunden]["m_Punkt"] / _sw_rho(theta_diffusor)
     if unten_oben == "unten":
         h_ab_min = speicher_param["H_B_UK_Dif"]
         h_ab_max = speicher_param["H_B_UK_Dif"] + speicher_param["H_RS_Dif"]
@@ -2020,19 +2015,19 @@ def __Modell_Abstrom(unten_oben, aktuellSekunden, ausgabezeit, Ausgabewerte,
 
             elif h_zelle_min <= h_ab_min and h_zelle_max >= h_ab_max:
                 dh_ab_rel[hPos] = 1
-                rho_mittel += dh_ab_rel[hPos] * __Modell_Stoffwerte("rho",theta)
+                rho_mittel += dh_ab_rel[hPos] * _sw_rho(theta)
 
             elif h_zelle_min <= h_ab_min and h_zelle_max >= h_ab_min:
                 dh_ab_rel[hPos] = (h_zelle_max - h_ab_min) / speicher_param["H_RS_Dif"]
-                rho_mittel += dh_ab_rel[hPos] * __Modell_Stoffwerte("rho", theta)
+                rho_mittel += dh_ab_rel[hPos] * _sw_rho(theta)
 
             elif h_zelle_min >= h_ab_min and h_zelle_max <= h_ab_max:
                 dh_ab_rel[hPos] = Speicherzustand[hPos][1] / speicher_param["H_RS_Dif"]
-                rho_mittel += dh_ab_rel[hPos] * __Modell_Stoffwerte("rho", theta)
+                rho_mittel += dh_ab_rel[hPos] * _sw_rho(theta)
 
             elif h_zelle_min <= h_ab_max and h_zelle_max >= h_ab_max:
                 dh_ab_rel[hPos] = (h_ab_max - h_zelle_min) / speicher_param["H_RS_Dif"]
-                rho_mittel += dh_ab_rel[hPos] * __Modell_Stoffwerte("rho", theta)
+                rho_mittel += dh_ab_rel[hPos] * _sw_rho(theta)
 
             elif h_zelle_min > h_ab_max:
                 break
@@ -2048,19 +2043,19 @@ def __Modell_Abstrom(unten_oben, aktuellSekunden, ausgabezeit, Ausgabewerte,
 
             elif h_zelle_min <= h_ab_min and h_zelle_max >= h_ab_max:
                 dh_ab_rel[hPos] = 1
-                rho_mittel += dh_ab_rel[hPos] * __Modell_Stoffwerte("rho",theta)
+                rho_mittel += dh_ab_rel[hPos] * _sw_rho(theta)
 
             elif h_zelle_min <= h_ab_min and h_zelle_max >= h_ab_min:
                 dh_ab_rel[hPos] = (h_zelle_max - h_ab_min) / (speicher_param["H_RS_Dif"])
-                rho_mittel += dh_ab_rel[hPos] * __Modell_Stoffwerte("rho", theta)
+                rho_mittel += dh_ab_rel[hPos] * _sw_rho(theta)
 
             elif h_zelle_min >= h_ab_min and h_zelle_max <= h_ab_max:
                 dh_ab_rel[hPos] = Speicherzustand[hPos][1] / (speicher_param["H_RS_Dif"])
-                rho_mittel += dh_ab_rel[hPos] * __Modell_Stoffwerte("rho", theta)
+                rho_mittel += dh_ab_rel[hPos] * _sw_rho(theta)
 
             elif h_zelle_min <= h_ab_max and h_zelle_max >= h_ab_max:
                 dh_ab_rel[hPos] = (h_ab_max - h_zelle_min) / (speicher_param["H_RS_Dif"])
-                rho_mittel += dh_ab_rel[hPos] * __Modell_Stoffwerte("rho", theta)
+                rho_mittel += dh_ab_rel[hPos] * _sw_rho(theta)
 
             elif h_zelle_max < h_ab_min:
                 break
@@ -2075,8 +2070,8 @@ def __Modell_Abstrom(unten_oben, aktuellSekunden, ausgabezeit, Ausgabewerte,
     theta_ab = 0
 
     if F_neben > 0:
-        rho_neben = __Modell_Stoffwerte("rho", theta_neben)
-        h_neben = __Modell_Stoffwerte("h", theta_neben)
+        rho_neben = _sw_rho(theta_neben)
+        h_neben = _sw_h(theta_neben)
         m_ab = rho_neben * F_neben * Zeitabstand
         
         H_ab = m_ab * h_neben
@@ -2094,15 +2089,15 @@ def __Modell_Abstrom(unten_oben, aktuellSekunden, ausgabezeit, Ausgabewerte,
             Speicherzustand[hPos][1] -= dh_ab
 
             H_ab  += (dh_ab * speicher_param["A_Quer"] 
-                      * __Modell_Stoffwerte("rho", theta)
-                      * __Modell_Stoffwerte("h", theta)
+                      * _sw_rho(theta)
+                      * _sw_h(theta)
                       )
             m_ab += dh_ab * speicher_param["A_Quer"]\
-                    * __Modell_Stoffwerte("rho",theta)
+                    * _sw_rho(theta)
         # ende for hpos
 
-        theta_ab = __Modell_Stoffwerte("h_rev", H_ab / m_ab)
-        rho_ab = __Modell_Stoffwerte("rho", theta_ab)
+        theta_ab = _sw_h_rev(H_ab / m_ab)
+        rho_ab = _sw_rho(theta_ab)
         V_ab_ist = m_ab/rho_ab
     # ende while
     Ausgabewerte[Ausgabename][ausgabezeit] = theta_ab
@@ -2139,34 +2134,34 @@ def __Modell_Waermeleitung(Zeitabstand, thetaRand, q_punkt,
     for j in range(0, len(thetaWL)):
     #for j in range(0, maxIndex):
         if all_h_pos[j] > 0:                                        # Dichte und cp für Zellen im Speichermedium und im Fundament berechnen
-            rho = __Modell_Stoffwerte("rho", thetaWL[j])            # für Dichte die Temperatur der Zelle selbst nehmen
-            cp = __Modell_Stoffwerte("cp", thetaWL[j+1])            # für Wärmekapazität die Temperatur der Zelle darunter nehmen
+            rho = _sw_rho(thetaWL[j])            # für Dichte die Temperatur der Zelle selbst nehmen
+            cp = _sw_cp(thetaWL[j+1])            # für Wärmekapazität die Temperatur der Zelle darunter nehmen
         else:
-            rho = __Modell_Stoffwerte("rho_Fundament")
-            cp = __Modell_Stoffwerte("cp_Fundament")
+            rho = _RHO_FUNDAMENT
+            cp = _CP_FUNDAMENT
         tlf_mod[j] = Zeitabstand / (rho * cp * 2 * dx[j])          
     # ende for
     
     for j in range(0, len(thetaWL)-1):                                          # Wärmeleitfähigkeit für alle Zellen im Speicher und Fundament berechnen
         if all_h_pos[j] > 0:
-            Lambda = __Modell_Stoffwerte("lambda",thetaWL[j])
+            Lambda = _sw_lambda(thetaWL[j])
         if all_h_pos[j+1] > 0:
-            Lambda_plus = __Modell_Stoffwerte("lambda", thetaWL[j+1])
+            Lambda_plus = _sw_lambda(thetaWL[j+1])
         if all_h_pos[j] < 0:
-            Lambda = __Modell_Stoffwerte("lambda_Fundament")
+            Lambda = _LAMBDA_FUNDAMENT
         if all_h_pos[j+1] < 0:
-            Lambda_plus = __Modell_Stoffwerte("lambda_Fundament")
+            Lambda_plus = _LAMBDA_FUNDAMENT
         lambda_[j] = (dx[j] + dx[j+1]) / (dx[j]/Lambda + dx[j+1]/Lambda_plus)   # mittlere Wärmeleitfähigkeit?? der Zelle und der Zelle darunter
     # ende for
 
-    lambda_0 = __Modell_Stoffwerte("lambda", thetaWL[0])
+    lambda_0 = _sw_lambda(thetaWL[0])
     c_WL[0] = -tlf_mod[0] * lambda_[0] / dx_[0]
     b_WL[0] = 1 + tlf_mod[0] * (lambda_[0] / dx_[0] + lambda_0 / (dx[0] / 2))
     d_WL[0] = thetaWL[0] * (1 - tlf_mod[0] * (lambda_[0] / dx_[0] + lambda_0 / (dx[0] / 2)))\
                 + thetaWL[1] * tlf_mod[0] * lambda_[0] / dx_[0]\
                 + 2 * thetaRand * tlf_mod[0] * lambda_0 / (dx[0] / 2)
-    rho_f = __Modell_Stoffwerte("rho_Fundament")
-    cp_f = __Modell_Stoffwerte("cp_Fundament")
+    rho_f = _RHO_FUNDAMENT
+    cp_f = _CP_FUNDAMENT
     a_WL[maxIndex] = -tlf_mod[maxIndex] * lambda_[maxIndex - 1] / dx_[maxIndex - 1]
     b_WL[maxIndex] = 1 + tlf_mod[maxIndex] * lambda_[maxIndex - 1] / dx_[maxIndex - 1]
     d_WL[maxIndex] = thetaWL[maxIndex] * (1 - tlf_mod[maxIndex] * lambda_[maxIndex - 1] / dx_[maxIndex - 1])\
@@ -2190,8 +2185,8 @@ def __Modell_Waermeleitung(Zeitabstand, thetaRand, q_punkt,
             Fundamentzustand[hPos][0] = thetaWL[j]
         if hPos > 0:
             masse = Speicherzustand[hPos][1]\
-                    * __Modell_Stoffwerte("rho", Speicherzustand[hPos][0])
-            Speicherzustand[hPos][1] = masse / __Modell_Stoffwerte("rho", thetaWL[j])
+                    * _sw_rho(Speicherzustand[hPos][0])
+            Speicherzustand[hPos][1] = masse / _sw_rho(thetaWL[j])
             Speicherzustand[hPos][0] = thetaWL[j]
         j += 1                                                                  # Frage: hPos wird nicht korrigiert, wann passiert das? in Modell_Aufräumen!
             
@@ -2270,10 +2265,10 @@ def __Modell_Kapazitaeten(dt_sub, T_amb, Kapazitaeten, Speicherzustand):
     for hPosW in all_h_pos_W:
         theta_W = Speicherzustand[hPosW][0]                                             # Temperatur der Wasserzelle
         dh_W = Speicherzustand[hPosW][1]                                                # Höhe der Wasserzelle
-        m_W = __Modell_Stoffwerte("rho", theta_W) * dh_W * speicher_param["A_Quer"]     # Masse der Wasserzelle
-        H = m_W * __Modell_Stoffwerte("h", theta_W) + E_an_W[hPosW]                     # neue Enthalpie der Wasserzelle
-        theta_W_neu = __Modell_Stoffwerte("h_rev", H/m_W)                               # neue Temperatur der Wasserzelle
-        rho_W_neu = __Modell_Stoffwerte("rho", theta_W_neu)                             # neue Dichte der Wasserzelle
+        m_W = _sw_rho(theta_W) * dh_W * speicher_param["A_Quer"]     # Masse der Wasserzelle
+        H = m_W * _sw_h(theta_W) + E_an_W[hPosW]                     # neue Enthalpie der Wasserzelle
+        theta_W_neu = _sw_h_rev(H/m_W)                               # neue Temperatur der Wasserzelle
+        rho_W_neu = _sw_rho(theta_W_neu)                             # neue Dichte der Wasserzelle
         Speicherzustand[hPosW][0] = theta_W_neu                                         # neue Temperatur in Speicherzustand schreiben
         Speicherzustand[hPosW][1] = m_W / rho_W_neu / speicher_param["A_Quer"]          # neue Höhe der Zelle berechnen und in Speicherzustand schreiben
     E_Verlust_Mantel = 0
@@ -2356,7 +2351,7 @@ def __Modell_Nebenstrom_zu(theta_zu, F_zu, h_WS, dh_zu, Speicherzustand):
 
     all_h_pos = sorted(Speicherzustand)
     fak_neben = 0
-    rho_1 = __Modell_Stoffwerte("rho", theta_zu)
+    rho_1 = _sw_rho(theta_zu)
     u_1 = F_zu / (pi * speicher_param["r_i_Gleitrohr"]**2)
 
     h_0 = h_WS - speicher_param["H_WS_OK_Dif"] - speicher_param["H_RS_Dif"]
@@ -2381,7 +2376,7 @@ def __Modell_Nebenstrom_zu(theta_zu, F_zu, h_WS, dh_zu, Speicherzustand):
     dh_0_2 = 0
     for i in range(i_2, i_0+1):
         hPos = all_h_pos[i]
-        rho_0_2 += __Modell_Stoffwerte("rho",Speicherzustand[hPos][0]) * Speicherzustand[hPos][1]
+        rho_0_2 += _sw_rho(Speicherzustand[hPos][0]) * Speicherzustand[hPos][1]
         dh_0_2 += Speicherzustand[hPos][1]
     rho_0_2 /= dh_0_2
 
@@ -2397,9 +2392,9 @@ def __Modell_Nebenstrom_zu(theta_zu, F_zu, h_WS, dh_zu, Speicherzustand):
     f_WUE = 0.05
     theta_1_stern = (1 - f_WUE) * theta_2 + f_WUE * (Speicherzustand[all_h_pos[i_0]][0] + theta_1_2) / 2
 
-    rho_2 = __Modell_Stoffwerte("rho", theta_2)
-    rho_r = __Modell_Stoffwerte("rho", (theta_2 + theta_1_stern)/2)
-    rho_1_stern = __Modell_Stoffwerte("rho", theta_1_stern)
+    rho_2 = _sw_rho(theta_2)
+    rho_r = _sw_rho((theta_2 + theta_1_stern)/2)
+    rho_1_stern = _sw_rho(theta_1_stern)
     rho_w = rho_1
 
     zeta_B = 2.6
@@ -2441,24 +2436,24 @@ def __Modell_Nebenstrom_zu(theta_zu, F_zu, h_WS, dh_zu, Speicherzustand):
     H_neben = 0
     counter_neben = 0
     while m_neben_Plug < m_neben_Plug_soll:
-        rho_i_neben_Plug = __Modell_Stoffwerte("rho", Speicherzustand[all_h_pos[i_2+counter_neben]][0])
+        rho_i_neben_Plug = _sw_rho(Speicherzustand[all_h_pos[i_2+counter_neben]][0])
         m_i_neben_Plug = Speicherzustand[all_h_pos[i_2+counter_neben]][1] * rho_i_neben_Plug
 
         if m_neben_Plug_soll - m_neben_Plug <= m_i_neben_Plug:
             m_i_neben_Plug -= (m_neben_Plug_soll -m_neben_Plug)
             Speicherzustand[all_h_pos[i_2+counter_neben]][1] = m_i_neben_Plug / rho_i_neben_Plug
-            H_neben += (m_neben_Plug_soll - m_neben_Plug) * __Modell_Stoffwerte("h", Speicherzustand[all_h_pos[i_2+counter_neben]][0])
+            H_neben += (m_neben_Plug_soll - m_neben_Plug) * _sw_h(Speicherzustand[all_h_pos[i_2+counter_neben]][0])
             m_neben_Plug = m_neben_Plug_soll
         else:
-            H_neben += m_i_neben_Plug * __Modell_Stoffwerte("h", Speicherzustand[all_h_pos[i_2+counter_neben]][0])
+            H_neben += m_i_neben_Plug * _sw_h(Speicherzustand[all_h_pos[i_2+counter_neben]][0])
             m_neben_Plug += m_i_neben_Plug
             Speicherzustand[all_h_pos[i_2+counter_neben]][1] = 0
         counter_neben += 1
-    H_neben += dh_zu * rho_1 * __Modell_Stoffwerte("h", theta_zu)
+    H_neben += dh_zu * rho_1 * _sw_h(theta_zu)
     m_zu_plus_neben = rho_1 * dh_zu * (1 + fak_neben)
     # NOTE: Hier kann eventuell etwas schlimmes passieren.
-    theta_zu = __Modell_Stoffwerte("h_rev", H_neben/m_zu_plus_neben)
-    rho_zu_plus_neben = __Modell_Stoffwerte("rho", theta_zu)
+    theta_zu = _sw_h_rev(H_neben/m_zu_plus_neben)
+    rho_zu_plus_neben = _sw_rho(theta_zu)
     dh_zu_plus_neben = m_zu_plus_neben / rho_zu_plus_neben
     dh_zu = dh_zu_plus_neben
     return dh_zu, theta_zu, fak_neben, Speicherzustand
@@ -2495,14 +2490,14 @@ def __Modell_Nebenstrom_ab(F_ab, h_WS, dt, Speicherzustand):
     dh_0_2 = 0
     for i in range(i_2, i_0+1):
         hPos = all_h_pos[i]
-        rho_0_2 += __Modell_Stoffwerte("rho", Speicherzustand[hPos][0]) * Speicherzustand[hPos][1]
+        rho_0_2 += _sw_rho(Speicherzustand[hPos][0]) * Speicherzustand[hPos][1]
         dh_0_2 += Speicherzustand[hPos][1]
     rho_0_2 /= dh_0_2
 
-    rho_2 = __Modell_Stoffwerte("rho", theta_2)
-    rho_R = __Modell_Stoffwerte("rho", (theta_2 + theta_1_stern)/2)
-    rho_1_stern = __Modell_Stoffwerte("rho", theta_1_stern)
-    rho_w = __Modell_Stoffwerte("rho", Speicherzustand[all_h_pos[i_0]][0])
+    rho_2 = _sw_rho(theta_2)
+    rho_R = _sw_rho((theta_2 + theta_1_stern)/2)
+    rho_1_stern = _sw_rho(theta_1_stern)
+    rho_w = _sw_rho(Speicherzustand[all_h_pos[i_0]][0])
 
     zeta_B = 2.6 # fuer Dessau
     zeta_M_0_stern = 1
@@ -2545,8 +2540,8 @@ def __Modell_Nebenstrom_ab(F_ab, h_WS, dt, Speicherzustand):
     H_neben = 0
     counter_neben = 0
     while V_neben_ist < V_neben_soll:
-        rho_i_Plug = __Modell_Stoffwerte("rho", Speicherzustand[all_h_pos[i_2+counter_neben]][0])
-        h_i_Plug = __Modell_Stoffwerte("h", Speicherzustand[all_h_pos[i_2+counter_neben]][0])
+        rho_i_Plug = _sw_rho(Speicherzustand[all_h_pos[i_2+counter_neben]][0])
+        h_i_Plug = _sw_h(Speicherzustand[all_h_pos[i_2+counter_neben]][0])
         V_i_Plug = speicher_param["A_Quer"] * Speicherzustand[all_h_pos[i_2+counter_neben]][1]
 
         if V_neben_soll - V_neben_ist <= V_i_Plug:
@@ -2565,8 +2560,8 @@ def __Modell_Nebenstrom_ab(F_ab, h_WS, dt, Speicherzustand):
     
     theta_neben = 0
     if F_neben>0:
-        theta_neben = __Modell_Stoffwerte("h_rev", H_neben/m_neben)
-        rho_neben = __Modell_Stoffwerte("rho", theta_neben)
+        theta_neben = _sw_h_rev(H_neben/m_neben)
+        rho_neben = _sw_rho(theta_neben)
         F_neben = (m_neben/rho_neben) / dt #* 3600
 
     return theta_neben, F_neben, Speicherzustand
@@ -2618,6 +2613,15 @@ def _sw_h_rev(H):
         T += (h * 1000 - _sw_h(T)) / _sw_cp(T)
     return T
 
+# Module-level constants for temperature-independent material properties.
+# Used directly at call sites (avoiding dispatch overhead for constants).
+_CP_FUNDAMENT     = 840
+_RHO_FUNDAMENT    = 2400
+_LAMBDA_FUNDAMENT = 4
+_TLF_FUNDAMENT    = 2 / 840 / 2400
+_RHO_MANTEL       = 7800
+_CP_MANTEL        = 490
+
 _SW_DISPATCH = {
     "rho":              _sw_rho,
     "cp":               _sw_cp,
@@ -2627,12 +2631,12 @@ _SW_DISPATCH = {
     "eta":              _sw_eta,
     "beta_rho":         _sw_beta_rho,
     "h_rev":            _sw_h_rev,
-    "cp_Fundament":     lambda _: 840,
-    "rho_Fundament":    lambda _: 2400,
-    "lambda_Fundament": lambda _: 4,
-    "TLF_Fundament":    lambda _: 2 / 840 / 2400,
-    "rho_Mantel":       lambda _: 7800,
-    "cp_Mantel":        lambda _: 490,
+    "cp_Fundament":     lambda _: _CP_FUNDAMENT,
+    "rho_Fundament":    lambda _: _RHO_FUNDAMENT,
+    "lambda_Fundament": lambda _: _LAMBDA_FUNDAMENT,
+    "TLF_Fundament":    lambda _: _TLF_FUNDAMENT,
+    "rho_Mantel":       lambda _: _RHO_MANTEL,
+    "cp_Mantel":        lambda _: _CP_MANTEL,
 }
 
 def __Modell_Stoffwerte(groesse, theta=None):
@@ -2646,8 +2650,8 @@ def __Temperatur_Abhaengige_Stoffwerte(groesse,theta):
         Wert = -5.911685E-06 * h**2 + 2.420544E-01 * h - 4.700638E-01
         loop = 0
         while (loop < 2):
-            h_theta_rev = __Modell_Stoffwerte("h", Wert)
-            cp_theta_rev = __Modell_Stoffwerte("cp", Wert)
+            h_theta_rev = _sw_h(Wert)
+            cp_theta_rev = _sw_cp(Wert)
             Wert += (h * 1000 - h_theta_rev) / cp_theta_rev
             loop += 1
         return Wert
