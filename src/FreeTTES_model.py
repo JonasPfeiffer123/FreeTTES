@@ -66,7 +66,7 @@ vorgang = ""
 flag = False
 
 # // Routine, die die Speicherberechnungen durchführt und über ein Skript aufgerufen wird
-def main(t, dt, m_VL,  m_RL, T_Zustrom, T_amb, eingabe_volumen=False, zustand_uebernehmen=False, zustand={}, T_Abstrom=0, T_DR=None, T_RL = 60):
+def main(t, dt, m_VL,  m_RL, T_Zustrom, T_amb, eingabe_volumen=False, zustand_uebernehmen=False, zustand={}, T_Abstrom=0, T_DR=None, T_RL = 60, _state=None):
     """
     Hauptroutine, in der die gesamte Speichersimulation für einen Zeitschritt stattfindet. Wird über ein separates Skript aufgerufen.
 
@@ -83,6 +83,9 @@ def main(t, dt, m_VL,  m_RL, T_Zustrom, T_amb, eingabe_volumen=False, zustand_ue
         T_Abstrom (float): for validation purpose only (or when Volumetric flow is given) in °C
         T_DR (float): Temperature of the steam layer above water, in case its dynamic in °C
         T_RL (float): Temperature which defines the minimal useful temperature in °C
+        _state (tuple, optional): In-memory state ``(Speicherzustand, Fundamentzustand, Kapazitaeten)``
+            returned by a previous call as ``outputs["_state"]``. When provided, the CSV
+            read in ``letzter_zustand()`` is skipped. Defaults to ``None`` (read from CSV).
 
     Returns:
         outputs: Dictionary will various output values
@@ -168,7 +171,12 @@ def main(t, dt, m_VL,  m_RL, T_Zustrom, T_amb, eingabe_volumen=False, zustand_ue
     # \\ bei t > 0 aus letztem Zeitschritt
     # Frage: bei erneuter Abfrage von TRNSYS wird letzter gespeicherter Zustand aus der Berechnung zuvor genommen?
     else:
-        Speicherzustand, Fundamentzustand, Kapazitaeten = __Modell_letzter_Zustand()
+        if _state is not None:
+            # In-memory state passed directly from the previous main() call –
+            # skip the 3-file CSV read that letzter_zustand() would perform.
+            Speicherzustand, Fundamentzustand, Kapazitaeten = _state
+        else:
+            Speicherzustand, Fundamentzustand, Kapazitaeten = __Modell_letzter_Zustand()
         h_WS = Speicherzustand[max(sorted(Speicherzustand))][1]/2 + max(sorted(Speicherzustand))
 
 
@@ -572,7 +580,11 @@ def main(t, dt, m_VL,  m_RL, T_Zustrom, T_amb, eingabe_volumen=False, zustand_ue
     "obere_hoehe_mischzone" : thermocline_max_h,
     "mischzone_groesse_relativ" : partial_volume_thermocline,
     "beladefaktor_nach_mischzone" : charge_factor,
-    "speicherzustand" : Speicherzustand
+    "speicherzustand" : Speicherzustand,
+    # Internal state tuple for in-memory passing to the next main() call.
+    # Pass as _state=result["_state"] to skip the CSV read in letzter_zustand().
+    # The CSV files are still written for crash recovery / backward compat.
+    "_state" : (Speicherzustand, Fundamentzustand, Kapazitaeten)
     }
 
     #outputs = Speicherzustand
