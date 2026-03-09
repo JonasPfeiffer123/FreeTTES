@@ -94,6 +94,7 @@ print("=" * 65)
 records    = []   # eine Zeile pro Zeitschritt
 profiles   = {}   # {t_h: Speicherzustand-dict}
 step_times = []   # Berechnungszeit pro Zeitschritt [s]
+_state     = None # in-memory state passed between main() calls (skips CSV read)
 
 total_start = time.perf_counter()
 
@@ -112,6 +113,7 @@ for t in range(N_HOURS):
             eingabe_volumen=False,
             zustand_uebernehmen=(t == 0),
             zustand=start_profil.copy() if t == 0 else {},
+            _state=_state,
         )
         phase = "beladen"
     elif t < T_END_IDLE:
@@ -126,6 +128,7 @@ for t in range(N_HOURS):
             eingabe_volumen=False,
             zustand_uebernehmen=False,
             zustand={},
+            _state=_state,
         )
         phase = "standzeit"
     else:
@@ -140,9 +143,11 @@ for t in range(N_HOURS):
             eingabe_volumen=False,
             zustand_uebernehmen=False,
             zustand={},
+            _state=_state,
         )
         phase = "entladen"
 
+    _state = result["_state"]
     step_dt = time.perf_counter() - step_start
     step_times.append(step_dt)
 
