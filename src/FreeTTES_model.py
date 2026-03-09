@@ -384,7 +384,7 @@ def main(t, dt, m_VL,  m_RL, T_Zustrom, T_amb, eingabe_volumen=False, zustand_ue
                                                         speicher_param["q_Punkt_U"],
                                                         Fundamentzustand,
                                                         Speicherzustand)                    # neuen Speicher- und Fundamentzustand nach Wärmeleitung berechnen
-        all_h_pos = sorted(list(Speicherzustand))
+        all_h_pos = sorted(Speicherzustand)
         q_punkt_oben = (theta_DR - (theta_o_Rand+Speicherzustand[all_h_pos[-1]][0]) / 2)\
             / (Speicherzustand[all_h_pos[-1]][1]/2)\
             * __Modell_Stoffwerte("lambda",Speicherzustand[all_h_pos[-1]][0])               # Mittelwert Temp. vor und nach der Ausführung der Wärmeleitung, Länge ist halbe Zellhöhe der obersten Zelle, ergibt insgesamt den Wärmestrom bezogen auf die Querschnittsfläche des Speichers vom DR in die oberste Zelle
@@ -420,7 +420,7 @@ def main(t, dt, m_VL,  m_RL, T_Zustrom, T_amb, eingabe_volumen=False, zustand_ue
 
         # // Fuellstand und Bodendruck bestimmen
         # ------------------------------------
-        all_h_pos = sorted(list(Speicherzustand))
+        all_h_pos = sorted(Speicherzustand)
 
         Ausgabewerte["FuellStand"][ausgabezeit] = all_h_pos[-1]\
                                             + Speicherzustand[all_h_pos[-1]][1] / 2         # Berechnung des Füllstands mithilfe der obersten Zelle des Speichers
@@ -498,7 +498,7 @@ def main(t, dt, m_VL,  m_RL, T_Zustrom, T_amb, eingabe_volumen=False, zustand_ue
     # nutzbare masse
     # definiert als masse des Mediums die waermer als die definierte Grentztempe-
     # ratur ist und vollstaendig unterhalb der Oberkante des oberen Diffusors
-    all_h_pos = sorted(list(Speicherzustand))
+    all_h_pos = sorted(Speicherzustand)
     lastKey = all_h_pos[-1]
     h_WS = lastKey + Speicherzustand[lastKey][1] / 2
     logger.debug("h_WS=%s", h_WS)
@@ -907,22 +907,22 @@ def __Modell_Initialisierung(H_UEB=None, BeladeFaktor=None, iniZeitstempel=0.00,
                 counter += 1
             # alles zusammensetzen
             h_Pos = 0
-            for counter in sorted(list(unterUnterkante), reverse=True):
+            for counter in sorted(unterUnterkante, reverse=True):
                 h_Pos += unterUnterkante[counter][1] / 2
                 Speicherzustand[h_Pos] = unterUnterkante[counter]
                 h_Pos += unterUnterkante[counter][1] / 2
 
-            for counter in sorted(list(kalteSeite), reverse=True):
+            for counter in sorted(kalteSeite, reverse=True):
                 h_Pos += kalteSeite[counter][1] / 2
                 Speicherzustand[h_Pos] = kalteSeite[counter]
                 h_Pos += kalteSeite[counter][1] / 2
 
-            for counter in sorted(list(heisseSeite)):
+            for counter in sorted(heisseSeite):
                 h_Pos += heisseSeite[counter][1] / 2
                 Speicherzustand[h_Pos] = heisseSeite[counter]
                 h_Pos += heisseSeite[counter][1] / 2
 
-            for counter in sorted(list(ueberOberkante)):
+            for counter in sorted(ueberOberkante):
                 h_Pos += ueberOberkante[counter][1] / 2
                 Speicherzustand[h_Pos] = ueberOberkante[counter]
                 h_Pos += ueberOberkante[counter][1] / 2
@@ -933,7 +933,7 @@ def __Modell_Initialisierung(H_UEB=None, BeladeFaktor=None, iniZeitstempel=0.00,
         if speicher_param["p_unten_anfang"] != 0:                                                                                   # wird durchlaufen, wenn ein Startspeicherzustand vorgegeben wurde
             h_WS = speicher_param["p_unten_pos"]                                                # Höhe der Wassersäule wird auf Position des Fülldrucksensors gesetzt
             bgd_p = speicher_param["p_unten_anfang"] * 100000                                   # entspricht Anfangsfülldruck in Pa
-            hPos_lst = sorted(list(zustand))                                                    # Liste, in der die Höhenpositionen aus "zustand" stehen, Frage: Wie sieht "zustand" aus?
+            hPos_lst = sorted(zustand)                                                    # Liste, in der die Höhenpositionen aus "zustand" stehen, Frage: Wie sieht "zustand" aus?
             dh = hPos_lst[1] - hPos_lst[0]                                                      # Abstand der ersten beiden Höhenpositionen - MUSS Abstand zwischen allen Zellen sein!
             # Wasserspiegelhoehe bestimmen
             for i in range(0,len(hPos_lst)):
@@ -991,13 +991,13 @@ def __Modell_Initialisierung(H_UEB=None, BeladeFaktor=None, iniZeitstempel=0.00,
                 float(z) : [float(T), dh, 0, 0]
                 for z, T in zip(z_new, T_new)
             }
-    # for hPos in sorted(list(Speicherzustand)):
+    # for hPos in sorted(Speicherzustand):
     #     with open("temp_init.dat", "a") as f:
     #         f.write("%.3f;  %.5f;  %.5f\n"%(hPos, Speicherzustand[hPos][1], Speicherzustand[hPos][0]))
     Speicherzustand = __Modell_Zellgroesse(0, "beides", Speicherzustand)                    # Zellen teilen bzw. zusammenlegen
     #// Fundamentzustand
     #-------------------
-    all_h_pos  = sorted(list(Speicherzustand))
+    all_h_pos  = sorted(Speicherzustand)
     theta_Grad_bodennah = (Speicherzustand[all_h_pos[1]][0] 
                            - Speicherzustand[all_h_pos[0]][0]) \
                            / (all_h_pos[1] - all_h_pos[0])                                  # Temperaturgradient zwischen den beiden untersten Speicherzellen
@@ -1069,7 +1069,7 @@ def __Modell_Zellgroesse(step, teilenZusammen, Speicherzustand):
         zuGrossezelle = True
         while zuGrossezelle:                                                        # solange durchführen, wie es zu große Zellen gibt -> wird erneut durchgeführt, wenn mindestens eine Zelle zu groß war
             Speicherzustand_neu = {}                                                # Variable für neuen Speicherzustand
-            all_h_pos = sorted(list(Speicherzustand))
+            all_h_pos = sorted(Speicherzustand)
             zuGrossezelle = False
             for i in range(1, len(all_h_pos)-1):                                    # alle bis auf die oberste und unterste Zelle durchgehen
                 hPos = all_h_pos[i]                                                 # Position der Zelle selbst
@@ -1174,7 +1174,7 @@ def __Modell_Zellgroesse(step, teilenZusammen, Speicherzustand):
         f_hyst = 4                                                                  # dient dazu, dass Zellen, die zuvor geteilt wurden, nicht wieder vereint werden
         if step < 1:
             f_hyst = 2
-        all_h_pos = sorted(list(Speicherzustand))
+        all_h_pos = sorted(Speicherzustand)
         count = 0
 
         for i in range(0, len(Speicherzustand)):                                    # alle Zellen durchgehen
@@ -1226,7 +1226,7 @@ def __Modell_Aufraumen(Speicherzustand):
     hPosNeu = 0
     SpeicherzustandAlt = Speicherzustand                                                # aktueller Speicherzustand wird in diese Variable geschrieben
     Speicherzustand = {}                                                                # Speicherzustand wird gelöscht
-    for hPosAlt in sorted(list(SpeicherzustandAlt)):
+    for hPosAlt in sorted(SpeicherzustandAlt):
         if SpeicherzustandAlt[hPosAlt][1] < 1.0E-09:
             continue                                                                    # sehr kleine Zellen werden gelöscht
         else:
@@ -1239,7 +1239,7 @@ def __Modell_Aufraumen(Speicherzustand):
 
 # // Modell: Horizontalmischung
 def __Modell_Horizontalmischung(Speicherzustand):
-    all_h_pos = sorted(list(Speicherzustand))
+    all_h_pos = sorted(Speicherzustand)
 
     for i in range(0,len(all_h_pos)):
         hPos = all_h_pos[i]
@@ -1372,7 +1372,7 @@ def __Modell_Horizontalmischung(Speicherzustand):
 # // Funktion: Impuls
 def __Modell_Impuls(inversion_status, Zeitabstand, Speicherzustand):
 
-    all_h_pos = sorted(list(Speicherzustand))
+    all_h_pos = sorted(Speicherzustand)
     # empirisch
     f_imp_an_b =  Zeitabstand / 3
 
@@ -1474,7 +1474,7 @@ def __Modell_Inversionspruefung(Speicherzustand):
     # das wird immer wieder gemacht um sicherzustellen, dass die Reihenfolge
     # ueberall gleich bleibt
 
-    all_h_pos = sorted(list(Speicherzustand))
+    all_h_pos = sorted(Speicherzustand)
     inversion = ""
     d_theta_Grenz = 1.0E-6
     inversionen = {
@@ -1526,7 +1526,7 @@ def __Modell_Inversionspruefung(Speicherzustand):
 # // Funktion: Inversionen auflösen
 # Inversionen im Temperaturfeld aufloesen
 def __Modell_Inversion(inversion_status, unten_oben, Vp_zu, dt, Speicherzustand):
-    all_h_pos = sorted(list(Speicherzustand))
+    all_h_pos = sorted(Speicherzustand)
     any_inv = True
     all_inv_counter = 0
 
@@ -1837,7 +1837,7 @@ def __Modell_Zustrom(unten_oben, aktuellSekunden, ausgabezeit, Begleitdaten,
     Es werden die Position und Eigenschaften der Zell berechnet.
     
     """
-    all_h_pos = sorted(list(Speicherzustand))
+    all_h_pos = sorted(Speicherzustand)
     h_WS = max(all_h_pos) + Speicherzustand[max(all_h_pos)][1] / 2
     if unten_oben == "unten":
         h_zu_min = speicher_param["H_B_UK_Dif"] + 0.01 * speicher_param["H_RS_Dif"]
@@ -1985,7 +1985,7 @@ def __Modell_Abstrom(unten_oben, aktuellSekunden, ausgabezeit, Ausgabewerte,
     und anschließend die Ausstromtemperatur berechnet
     """
     Speicherzustand = __Modell_Aufraumen(Speicherzustand)
-    all_h_pos = sorted(list(Speicherzustand))
+    all_h_pos = sorted(Speicherzustand)
     lastKey = max(all_h_pos)
     h_WS = lastKey + Speicherzustand[lastKey][1] / 2
     theta_diffusor = __Modell_Temperatur_Diffusorhoehe(unten_oben, h_WS, Speicherzustand)
@@ -2086,7 +2086,7 @@ def __Modell_Abstrom(unten_oben, aktuellSekunden, ausgabezeit, Ausgabewerte,
 
     while (abs(V_ab_soll - V_ab_ist) > 1.0E-06):
         dh_ab_ges = (V_ab_soll  - V_ab_ist) / speicher_param["A_Quer"]
-        for hPos in sorted(list(dh_ab_rel)):
+        for hPos in sorted(dh_ab_rel):
             theta = Speicherzustand[hPos][0]
             dh_ab = dh_ab_rel[hPos] * dh_ab_ges
             if dh_ab > Speicherzustand[hPos][1]:
@@ -2121,7 +2121,7 @@ def __Modell_Waermeleitung(Zeitabstand, thetaRand, q_punkt,
 
     Gesamtzustand = {}
     Gesamtzustand = {**Fundamentzustand,**Speicherzustand}          # Fundament- und Speicherzustand werden in eine Variable geschrieben
-    all_h_pos = (sorted(list(Gesamtzustand)))                       # Sortierung aller Höhenpositionen in einer Liste
+    all_h_pos = (sorted(Gesamtzustand))                       # Sortierung aller Höhenpositionen in einer Liste
     all_h_pos.reverse()                                             # Reihenfolge vertauschen, Index 0 ist oben, Speicher wird von oben nach unten durchgegangen
     thetaWL = [Gesamtzustand[h][0] for h in all_h_pos]              # Liste aller Temperaturen der Zellen
     dx = [Gesamtzustand[h][1] for h in all_h_pos]                   # Liste aller Dicken der Zellen
@@ -2223,8 +2223,8 @@ def __Modell_Kapazitaeten(dt_sub, T_amb, Kapazitaeten, Speicherzustand):
     """
     U_Wert = 800 # Wärmeübergangskoeffizient !!!! (eigentlich) ALPHA  (von wasser zu innere Manteloberfläche) W/m2K (nicht wie in config)
     E_an_W = {} # von bauteilkapa an wasser energie
-    all_h_pos_K = sorted(list(Kapazitaeten))
-    all_h_pos_W = sorted(list(Speicherzustand))
+    all_h_pos_K = sorted(Kapazitaeten)
+    all_h_pos_W = sorted(Speicherzustand)
     Fuellstand = all_h_pos_W[-1] + Speicherzustand[all_h_pos_W[-1]][1] / 2          # Position der obersten Zelle + halbe Zellhöhe
 
 
@@ -2293,7 +2293,7 @@ def __Modell_Temperatur_Diffusorhoehe(unten_oben, h_WS, Speicherzustand):
 
     dh_rel = {}
     theta_mittel = 0
-    all_h_pos = sorted(list(Speicherzustand))
+    all_h_pos = sorted(Speicherzustand)
     if unten_oben == "unten":
         h_ab_min = speicher_param["H_B_UK_Dif"]
         h_ab_max = speicher_param["H_B_UK_Dif"] + speicher_param["H_RS_Dif"]
@@ -2354,7 +2354,7 @@ def __Modell_Temperatur_Diffusorhoehe(unten_oben, h_WS, Speicherzustand):
 # \\ nur für Speicher Dessau notwendig
 def __Modell_Nebenstrom_zu(theta_zu, F_zu, h_WS, dh_zu, Speicherzustand):
 
-    all_h_pos = sorted(list(Speicherzustand))
+    all_h_pos = sorted(Speicherzustand)
     fak_neben = 0
     rho_1 = __Modell_Stoffwerte("rho", theta_zu)
     u_1 = F_zu / (pi * speicher_param["r_i_Gleitrohr"]**2)
@@ -2467,7 +2467,7 @@ def __Modell_Nebenstrom_zu(theta_zu, F_zu, h_WS, dh_zu, Speicherzustand):
 # \\ nur für Speicher Dessau notwendig
 def __Modell_Nebenstrom_ab(F_ab, h_WS, dt, Speicherzustand):
 
-    all_h_pos = sorted(list(Speicherzustand))
+    all_h_pos = sorted(Speicherzustand)
     F_neben = 0
     h_0 = h_WS - speicher_param["H_WS_OK_Dif"] - speicher_param["H_RS_Dif"]
     h_2 = h_0 - speicher_param["L_Fuehrung"]
@@ -2589,18 +2589,57 @@ def __Modell_find_index_h_pos(h_such, all_h_pos):
     return index
 
 # // Funktion: Stoffwerte für bestimmte Temperatur ausgeben
+# ---------------------------------------------------------------------------
+# Fast-dispatch table: replaces the original string-comparison chain with a
+# single dict lookup + direct function call, eliminating up to 15 string ops
+# per call (old: 1 list-membership test O(8) + sub-function call + ≤7 if/elif).
+# h_rev is inlined to avoid recursive dispatch inside Newton iterations.
+# ---------------------------------------------------------------------------
+
+def _sw_rho(T):       return -2.525726E-03*T**2 - 2.123038E-01*T + 1.005011E+03
+def _sw_cp(T):        return  9.776500E-03*T**2 - 7.677243E-01*T + 4.194836E+03
+def _sw_h(T):         return  4.394221E-01*T**2 + 4.129877E+03*T + 1.987100E+03
+def _sw_lambda(T):    return (3.097195E-08*T**3 - 1.565775E-05*T**2
+                              + 2.517120E-03*T + 5.531103E-01)
+def _sw_TLF(T):       return -1.740136E-12*T**2 + 5.093712E-10*T + 1.346697E-07
+def _sw_eta(T):       return (-4.617641E-10*T**3 + 1.663679E-07*T**2
+                              - 2.221812E-05*T + 1.301820E-03)
+def _sw_beta_rho(T):  return  9.699776E-09*T**2 - 7.361887E-06*T - 1.135069E-04
+
+def _sw_h_rev(H):
+    """Inverse of _sw_h: given specific enthalpy H [J/kg], return T [°C].
+    Two Newton iterations from a quadratic initial guess.
+    Inlined (no recursive dispatch).  Uses h=H/1000 and h*1000 in the Newton
+    correction (not H directly) to match the original floating-point behaviour.
+    """
+    h = H / 1000
+    T = -5.911685E-06 * h**2 + 2.420544E-01 * h - 4.700638E-01
+    for _ in range(2):
+        T += (h * 1000 - _sw_h(T)) / _sw_cp(T)
+    return T
+
+_SW_DISPATCH = {
+    "rho":              _sw_rho,
+    "cp":               _sw_cp,
+    "h":                _sw_h,
+    "lambda":           _sw_lambda,
+    "TLF":              _sw_TLF,
+    "eta":              _sw_eta,
+    "beta_rho":         _sw_beta_rho,
+    "h_rev":            _sw_h_rev,
+    "cp_Fundament":     lambda _: 840,
+    "rho_Fundament":    lambda _: 2400,
+    "lambda_Fundament": lambda _: 4,
+    "TLF_Fundament":    lambda _: 2 / 840 / 2400,
+    "rho_Mantel":       lambda _: 7800,
+    "cp_Mantel":        lambda _: 490,
+}
+
 def __Modell_Stoffwerte(groesse, theta=None):
-    if groesse in ["rho","cp","lambda","TLF", "eta", "beta_rho", "h", "h_rev"]:
-        Wert = __Temperatur_Abhaengige_Stoffwerte(groesse, theta)
-    elif groesse in ["cp_Fundament", "rho_Fundament", "TLF_Fundament",
-                     "lambda_Fundament", "rho_Mantel", "cp_Mantel"]:
-        Wert = __Temperatur_Unabhaengige_Stoffwerte(groesse)
-    else:
-        raise ValueError("Die gesuchte Stoffgroesse '%s' ist nicht"%groesse
-                         +"hinterlegt!\nAbbruch\n")
-    return Wert
+    return _SW_DISPATCH[groesse](theta)
 
 # // Funktion: Berechnung der Stoffwerte, die von der Temperatur abhängig sind
+# (retained for reference; no longer called by __Modell_Stoffwerte)
 def __Temperatur_Abhaengige_Stoffwerte(groesse,theta):
     if groesse == "h_rev":
         h = theta / 1000
