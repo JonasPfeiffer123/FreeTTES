@@ -83,6 +83,9 @@ def main(t, dt, m_VL,  m_RL, T_Zustrom, T_amb, eingabe_volumen=False, zustand_ue
         T_Abstrom (float): for validation purpose only (or when Volumetric flow is given) in °C
         T_DR (float): Temperature of the steam layer above water, in case its dynamic in °C
         T_RL (float): Temperature which defines the minimal useful temperature in °C
+        _state (tuple, optional): In-memory state ``(Speicherzustand, Fundamentzustand, Kapazitaeten)``
+            returned by a previous call as ``outputs["_state"]``. When provided, the CSV
+            read in ``letzter_zustand()`` is skipped. Defaults to ``None`` (read from CSV).
 
     Returns:
         outputs: Dictionary will various output values
