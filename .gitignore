@@ -7,4 +7,3 @@ src/test_compare_original_vs_freettes.py
 
 # Benchmark-Laufergebnisse (generiert) – nur baseline/ wird ins Repo aufgenommen
 benchmark/results/
-!benchmark/results/baseline/
