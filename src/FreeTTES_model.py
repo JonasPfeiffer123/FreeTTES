@@ -16,6 +16,7 @@ import os
 #import sys
 import json
 from scipy import special, interpolate
+from scipy.linalg import solve_banded as _solve_banded
 from math import log, pi, tan, exp
 import csv
 # fuer excel datei lesen
@@ -2116,89 +2117,102 @@ def __Modell_Abstrom(unten_oben, aktuellSekunden, ausgabezeit, Ausgabewerte,
 
 
 # // Funktion: Wärmeleitung
-def __Modell_Waermeleitung(Zeitabstand, thetaRand, q_punkt, 
+def __Modell_Waermeleitung(Zeitabstand, thetaRand, q_punkt,
                            Fundamentzustand, Speicherzustand):
     """
     Berechnet die Wärmeleitung im Inneren des Speichers anhand der Wärmeleitungsgleichung
-
+    (NumPy-vektorisiert; TDMA via scipy.linalg.solve_banded)
     """
+    Gesamtzustand = {**Fundamentzustand, **Speicherzustand}
+    all_h_pos = sorted(Gesamtzustand, reverse=True)   # Index 0 = oben
+    n        = len(all_h_pos)
+    maxIndex = n - 1
 
-    Gesamtzustand = {}
-    Gesamtzustand = {**Fundamentzustand,**Speicherzustand}          # Fundament- und Speicherzustand werden in eine Variable geschrieben
-    all_h_pos = (sorted(Gesamtzustand))                       # Sortierung aller Höhenpositionen in einer Liste
-    all_h_pos.reverse()                                             # Reihenfolge vertauschen, Index 0 ist oben, Speicher wird von oben nach unten durchgegangen
-    thetaWL = [Gesamtzustand[h][0] for h in all_h_pos]              # Liste aller Temperaturen der Zellen
-    dx = [Gesamtzustand[h][1] for h in all_h_pos]                   # Liste aller Dicken der Zellen
-    maxIndex = len(thetaWL) - 1                                     # Index des letzten Eintrags der Liste
-    dx_ = [None for h in all_h_pos]                                 # Erstellen von 7 Listen mit der Länge all_h_pos und dem Inhalt "None"
-    tlf_mod = [None for h in all_h_pos]
-    a_WL = [None for h in all_h_pos]
-    b_WL = [None for h in all_h_pos]
-    c_WL = [None for h in all_h_pos]
-    d_WL = [None for h in all_h_pos]
-    lambda_ = [None for h in all_h_pos]
+    thetaWL = np.array([Gesamtzustand[h][0] for h in all_h_pos])
+    dx      = np.array([Gesamtzustand[h][1] for h in all_h_pos])
+    h_arr   = np.array(all_h_pos)
 
-    for j in range(0, maxIndex):
-        dx_[j] = (dx[j] + dx[j+1]) / 2                              # arithmetisches Mittel der Dicke von der Zelle und der Zelle darunter (weil von oben nach unten gegangen wird) bis zum vorletzten Element der Liste
-    for j in range(0, len(thetaWL)):
-    #for j in range(0, maxIndex):
-        if all_h_pos[j] > 0:                                        # Dichte und cp für Zellen im Speichermedium und im Fundament berechnen
-            rho = _sw_rho(thetaWL[j])            # für Dichte die Temperatur der Zelle selbst nehmen
-            cp = _sw_cp(thetaWL[j+1])            # für Wärmekapazität die Temperatur der Zelle darunter nehmen
-        else:
-            rho = _RHO_FUNDAMENT
-            cp = _CP_FUNDAMENT
-        tlf_mod[j] = Zeitabstand / (rho * cp * 2 * dx[j])          
-    # ende for
-    
-    for j in range(0, len(thetaWL)-1):                                          # Wärmeleitfähigkeit für alle Zellen im Speicher und Fundament berechnen
-        if all_h_pos[j] > 0:
-            Lambda = _sw_lambda(thetaWL[j])
-        if all_h_pos[j+1] > 0:
-            Lambda_plus = _sw_lambda(thetaWL[j+1])
-        if all_h_pos[j] < 0:
-            Lambda = _LAMBDA_FUNDAMENT
-        if all_h_pos[j+1] < 0:
-            Lambda_plus = _LAMBDA_FUNDAMENT
-        lambda_[j] = (dx[j] + dx[j+1]) / (dx[j]/Lambda + dx[j+1]/Lambda_plus)   # mittlere Wärmeleitfähigkeit?? der Zelle und der Zelle darunter
-    # ende for
+    # dx_[j] = arithmetisches Mittel von dx[j] und dx[j+1]; shape (n-1,)
+    dx_arr = (dx[:-1] + dx[1:]) * 0.5
 
-    lambda_0 = _sw_lambda(thetaWL[0])
-    c_WL[0] = -tlf_mod[0] * lambda_[0] / dx_[0]
-    b_WL[0] = 1 + tlf_mod[0] * (lambda_[0] / dx_[0] + lambda_0 / (dx[0] / 2))
-    d_WL[0] = thetaWL[0] * (1 - tlf_mod[0] * (lambda_[0] / dx_[0] + lambda_0 / (dx[0] / 2)))\
-                + thetaWL[1] * tlf_mod[0] * lambda_[0] / dx_[0]\
-                + 2 * thetaRand * tlf_mod[0] * lambda_0 / (dx[0] / 2)
-    rho_f = _RHO_FUNDAMENT
-    cp_f = _CP_FUNDAMENT
-    a_WL[maxIndex] = -tlf_mod[maxIndex] * lambda_[maxIndex - 1] / dx_[maxIndex - 1]
-    b_WL[maxIndex] = 1 + tlf_mod[maxIndex] * lambda_[maxIndex - 1] / dx_[maxIndex - 1]
-    d_WL[maxIndex] = thetaWL[maxIndex] * (1 - tlf_mod[maxIndex] * lambda_[maxIndex - 1] / dx_[maxIndex - 1])\
-                    + thetaWL[maxIndex - 1] * tlf_mod[maxIndex] * lambda_[maxIndex - 1] / dx_[maxIndex - 1]\
-                    - q_punkt * Zeitabstand / (dx[maxIndex] * rho_f * cp_f)
+    # rho[j]: Speicherzelle -> _sw_rho(theta[j]), Fundament -> _RHO_FUNDAMENT
+    water_mask = h_arr > 0
+    rho_arr = np.where(water_mask, _sw_rho(thetaWL), _RHO_FUNDAMENT)
 
+    # cp[j]: Speicherzelle -> _sw_cp(theta[j+1]), Fundament -> _CP_FUNDAMENT
+    # letzte Zelle (maxIndex) ist immer Fundament, daher dummy-Wert unproblematisch
+    theta_next        = np.empty(n)
+    theta_next[:-1]   = thetaWL[1:]
+    theta_next[-1]    = thetaWL[-1]
+    cp_arr = np.where(water_mask, _sw_cp(theta_next), _CP_FUNDAMENT)
 
-    for j in range(1,maxIndex):                                                 # Berechnung der Koeffizienten zur Lösung des linearen Gleichungssystems der Wärmeleitungsgleichung für jede Zelle
-        a_WL[j] = -tlf_mod[j] * lambda_[j-1] / dx_[j-1]
-        b_WL[j] = 1 + tlf_mod[j] * (lambda_[j] / dx_[j] + lambda_[j-1] / dx_[j-1])
-        c_WL[j] = -tlf_mod[j] * lambda_[j] / dx_[j]
-        d_WL[j] = thetaWL[j] * (1 - tlf_mod[j] * (lambda_[j-1] / dx_[j-1] + lambda_[j] / dx_[j]))\
-                 + thetaWL[j+1] * tlf_mod[j] * lambda_[j] / dx_[j]\
-                 + thetaWL[j-1] * tlf_mod[j] * lambda_[j-1] / dx_[j-1]
+    tlf_mod = Zeitabstand / (rho_arr * cp_arr * 2.0 * dx)
 
-    thetaWL = __Modell_TDMASolve(a_WL, b_WL, c_WL, d_WL)                        # Berechnung der neuen Temperatur jeder Zelle durch Lösung der Wärmeleitungsgleichung
-    j = 0
-    thetaWL[0] = thetaRand
-    for hPos in all_h_pos:                                                      # neue Temperaturen und Zellhöhen in Speicherzustand und Fundamentzustand schreiben
-        if hPos < 0: 
-            Fundamentzustand[hPos][0] = thetaWL[j]
-        if hPos > 0:
-            masse = Speicherzustand[hPos][1]\
-                    * _sw_rho(Speicherzustand[hPos][0])
-            Speicherzustand[hPos][1] = masse / _sw_rho(thetaWL[j])
-            Speicherzustand[hPos][0] = thetaWL[j]
-        j += 1                                                                  # Frage: hPos wird nicht korrigiert, wann passiert das? in Modell_Aufräumen!
-            
+    # Wärmeleitfähigkeit pro Zelle; harmonisches Mittel zwischen Nachbarn -> shape (n-1,)
+    Lambda_arr = np.where(h_arr > 0, _sw_lambda(thetaWL), _LAMBDA_FUNDAMENT)
+    dx_j  = dx[:-1];  dx_j1 = dx[1:]
+    L_j   = Lambda_arr[:-1];  L_j1 = Lambda_arr[1:]
+    lambda_arr = (dx_j + dx_j1) / (dx_j / L_j + dx_j1 / L_j1)   # shape (n-1,)
+
+    # TDMA-Koeffizienten
+    a_WL = np.zeros(n)
+    b_WL = np.zeros(n)
+    c_WL = np.zeros(n)
+    d_WL = np.zeros(n)
+
+    # Randbedingung j=0 (oben)
+    lambda_0 = float(_sw_lambda(thetaWL[0]))
+    _l0_dx0  = lambda_arr[0] / dx_arr[0]
+    _l0_top  = lambda_0 / (dx[0] * 0.5)
+    c_WL[0]  = -tlf_mod[0] * _l0_dx0
+    b_WL[0]  =  1.0 + tlf_mod[0] * (_l0_dx0 + _l0_top)
+    d_WL[0]  = (thetaWL[0] * (1.0 - tlf_mod[0] * (_l0_dx0 + _l0_top))
+                + thetaWL[1] * tlf_mod[0] * _l0_dx0
+                + 2.0 * thetaRand * tlf_mod[0] * _l0_top)
+
+    # Randbedingung j=maxIndex (unten)
+    _lN = lambda_arr[maxIndex - 1] / dx_arr[maxIndex - 1]
+    a_WL[maxIndex] = -tlf_mod[maxIndex] * _lN
+    b_WL[maxIndex] =  1.0 + tlf_mod[maxIndex] * _lN
+    d_WL[maxIndex] = (thetaWL[maxIndex] * (1.0 - tlf_mod[maxIndex] * _lN)
+                      + thetaWL[maxIndex - 1] * tlf_mod[maxIndex] * _lN
+                      - q_punkt * Zeitabstand / (dx[maxIndex] * _RHO_FUNDAMENT * _CP_FUNDAMENT))
+
+    # Innere Zellen j=1..maxIndex-1 (vektorisiert)
+    js   = slice(1, maxIndex)
+    lm1  = lambda_arr[0:maxIndex - 1]   # lambda_[j-1]
+    lj   = lambda_arr[1:maxIndex]       # lambda_[j]
+    dm1  = dx_arr[0:maxIndex - 1]       # dx_[j-1]
+    dj   = dx_arr[1:maxIndex]           # dx_[j]
+    tm   = tlf_mod[1:maxIndex]
+    ratio_m1 = lm1 / dm1
+    ratio_j  = lj  / dj
+    a_WL[js] = -tm * ratio_m1
+    b_WL[js] =  1.0 + tm * (ratio_j + ratio_m1)
+    c_WL[js] = -tm * ratio_j
+    d_WL[js] = (thetaWL[1:maxIndex]     * (1.0 - tm * (ratio_m1 + ratio_j))
+                + thetaWL[2:maxIndex+1] * tm * ratio_j
+                + thetaWL[0:maxIndex-1] * tm * ratio_m1)
+
+    # Tridiagonales System lösen (LAPACK dgbsv via scipy)
+    ab         = np.empty((3, n))
+    ab[0, 0]   = 0.0          # unused (upper diag, first column)
+    ab[0, 1:]  = c_WL[:-1]   # Überdiagonale
+    ab[1, :]   = b_WL         # Hauptdiagonale
+    ab[2, :-1] = a_WL[1:]    # Unterdiagonale
+    ab[2, -1]  = 0.0          # unused
+    result     = _solve_banded((1, 1), ab, d_WL).tolist()
+    result[0]  = thetaRand    # Randbedingung oben erzwingen
+
+    # Ergebnisse zurückschreiben
+    for j, hPos in enumerate(all_h_pos):   # Frage: hPos wird nicht korrigiert, wann passiert das? in Modell_Aufräumen!
+        if hPos < 0:
+            Fundamentzustand[hPos][0] = result[j]
+        elif hPos > 0:
+            masse = Speicherzustand[hPos][1] * _sw_rho(Speicherzustand[hPos][0])
+            Speicherzustand[hPos][1]  = masse / _sw_rho(result[j])
+            Speicherzustand[hPos][0]  = result[j]
+
     return Fundamentzustand, Speicherzustand
 
 # // Funktion: TDMASolve
