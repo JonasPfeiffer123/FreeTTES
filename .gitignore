@@ -5,5 +5,5 @@ datei/
 src/datei/
 src/test_compare_original_vs_freettes.py
 
-# Benchmark-Laufergebnisse (generiert) – nur baseline/ wird ins Repo aufgenommen
+# Benchmark-Laufergebnisse (generiert)
 benchmark/results/
