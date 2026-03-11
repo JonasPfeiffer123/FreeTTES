@@ -4,6 +4,3 @@ __pycache__/
 datei/
 src/datei/
 src/test_compare_original_vs_freettes.py
-
-# Benchmark-Laufergebnisse (generiert)
-benchmark/results/
